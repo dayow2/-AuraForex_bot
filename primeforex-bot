@@ -1,6 +1,0 @@
-git init
-git add .
-git commit -m "Initialize PrimeForex telegram bot skeleton"
-git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/primeforex-bot.git
-git push -u origin main
