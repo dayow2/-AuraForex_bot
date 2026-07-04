@@ -1,79 +1,78 @@
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# 1. Setup Logging to observe actions in the Railway console
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 2. Extract configuration from Environment Variables
-TOKEN = os.getenv("BOT_TOKEN")
-# NOTE: Once you find your Video File ID using the step below, paste it here!
-VIDEO_FILE_ID = os.getenv("VIDEO_FILE_ID", "PASTE_YOUR_TELEGRAM_VIDEO_FILE_ID_HERE")
-CHANNEL_URL = "https://t.me/PrimeForex1121"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends the welcome message, video, and your channel access button."""
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Premium, compliant welcome message avoiding "get rich" words
     welcome_text = (
-        "📊 *Welcome to PrimeForex Bot!*\n\n"
-        "Unlock elite Forex insights, real-time market analysis, and precision signals "
-        "designed to scale your trading parameters.\n\n"
-        "🚀 Click the button below to join our official trading feed!"
+        "📊 **Welcome to AuraForex Analytics Core**\n\n"
+        "Your automated dashboard for market execution metrics, currency tracking utilities, "
+        "and volatility calculation analytics.\n\n"
+        "💡 *Select an educational market tool module below to begin:* \n\n"
+        "⚠️ *Disclaimer: This platform provides educational market utilities only. "
+        "Content does not constitute financial, trading, or investment advice.*"
     )
     
-    # Create the beautiful interactive button linking to your Forex channel
-    keyboard = [[InlineKeyboardButton("🎯 Join PrimeForex Channel", url=CHANNEL_URL)]]
+    keyboard = [
+        [InlineKeyboardButton("🧰 Position Size Calculator", callback_data="calc")],
+        [InlineKeyboardButton("📈 Volatility Indicators", callback_data="volatility")],
+        [InlineKeyboardButton("📚 Educational Resources", callback_data="edu")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
 
-    try:
-        # Attempt to deliver using the efficient Telegram file_id cache
-        await context.bot.send_video(
-            chat_id=update.effective_chat.id,
-            video=VIDEO_FILE_ID,
-            caption=welcome_text,
-            parse_mode="Markdown",
-            reply_markup=reply_markup
+async def button_dispatcher(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "calc":
+        calc_text = (
+            "🧰 **Risk & Position Size Calculator**\n"
+            "---\n"
+            "Plan your market exposures safely using standard risk parameters:\n\n"
+            "• **Standard Lot size:** 100,000 units\n"
+            "• **Mini Lot size:** 10,000 units\n"
+            "• **Micro Lot size:** 1,000 units\n\n"
+            "👉 *To calculate your exact lot size, use formula:* \n"
+            "$$Lot = \\frac{Risk\\ Amount}{(Stop\\ Loss\\ in\\ Pips \\times Pip\\ Value)}$$"
         )
-    except Exception as e:
-        logger.error(f"Failed to send video: {e}. Falling back to plain text welcome.")
-        # Fail-safe alternative if your file_id isn't filled out or configured yet
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"{welcome_text}\n\n_(Note: Video configuration pending setup)_",
-            parse_mode="Markdown",
-            reply_markup=reply_markup
+        await query.edit_message_text(calc_text, parse_mode="Markdown")
+
+    elif query.data == "volatility":
+        vol_text = (
+            "📈 **Market Volatility Mechanics**\n"
+            "---\n"
+            "Tracking currency pair volatility is crucial for setting protective stop losses.\n\n"
+            "📊 **Average True Range (ATR) Baselines:**\n"
+            "• EUR/USD: 60-80 pips daily avg.\n"
+            "• GBP/JPY: 120-150 pips daily avg.\n"
+            "• Gold (XAU/USD): 200-300 pips daily avg.\n\n"
+            "💡 *Tip: High volatility pairs require wider parameters to avoid premature stop-outs.*"
         )
+        await query.edit_message_text(vol_text, parse_mode="Markdown")
 
-async def catch_video_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Helper Function: Logs incoming video IDs to your terminal logs."""
-    if update.message.video:
-        file_id = update.message.video.file_id
-        logger.info(f"!!! FOUND YOUR VIDEO FILE ID !!! -> {file_id}")
-        await update.message.reply_text(
-            f"✅ **Video ID Captured!**\n\nCopy this exact ID and save it:\n`{file_id}`",
-            parse_mode="Markdown"
+    elif query.data == "edu":
+        edu_text = (
+            "📚 **Forex Market Academy Modules**\n"
+            "---\n"
+            "Master the foundational elements of data structures in trading:\n\n"
+            "1️⃣ **Technical Analysis:** Reading candlestick chart syntax, trendlines, and structure breakouts.\n"
+            "2️⃣ **Risk Management:** Never exposing more than 1% to 2% of total capital on a single transaction setup.\n"
+            "3️⃣ **Fundamental Data:** Monitoring macroeconomic interest rates, NFP releases, and central bank policies."
         )
+        await query.edit_message_text(edu_text, parse_mode="Markdown")
 
-def main() -> None:
-    """Pre-initializes the Telegram Application loop."""
-    if not TOKEN:
-        logger.error("CRITICAL ERROR: BOT_TOKEN environment variable is missing!")
-        return
-
-    # Build the bot runtime application instance
-    application = Application.builder().token(TOKEN).build()
-
-    # Match commands and standard user inputs
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.VIDEO, catch_video_id))
-
-    # Keep polling for user actions indefinitely
-    logger.info("PrimeForex Bot Engine Started Successfully...")
+def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CallbackQueryHandler(button_dispatcher))
     application.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
